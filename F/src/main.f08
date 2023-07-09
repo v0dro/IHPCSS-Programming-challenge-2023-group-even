@@ -13,8 +13,6 @@ PROGRAM main
 
     !> The number of vertices in the graph.
     INTEGER, PARAMETER :: GRAPH_ORDER = 1000
-    !> The number of edges in the graph.
-    INTEGER, PARAMETER :: GRAPH_SIZE = 100000
     !> Parameters used in pagerank convergence, do not change.
     REAL(KIND=8), PARAMETER :: DAMPING_FACTOR = 0.85
     !> The number of seconds to not exceed forthe calculation loop.
