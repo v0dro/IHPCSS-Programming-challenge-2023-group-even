@@ -1,8 +1,6 @@
-!> @file main.c
+!> @file main.f08
 !> @brief This file provides you with the original implementation of pagerank.
 !> Your challenge is to optimise it using OpenMP and/or MPI.
-!> @details Algorithmic optimisations allowed: calculating the outdegrees,
-!> buffer swap, change the storage format.
 !> @author Ludovic Capelli (l.capelli@epcc.ed.ac.uk)
 
 PROGRAM main
