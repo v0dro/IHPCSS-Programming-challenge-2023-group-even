@@ -42,20 +42,6 @@ void initialize_graph(void)
 }
 
 /**
- * @brief Adds a directed edge to the graph, from \p source to \p destination.
- * @details If the edge already exists, it does nothing.
- * @param source The identifier of the vertex at the start of the edge.
- * @param destination The identifier of the vertex at the end of the edge.
- */
-void add_edge(int source, int destination)
-{
-    if (source >= 0 && source < GRAPH_ORDER && destination >= 0 && destination < GRAPH_ORDER)
-    {
-        adjacency_matrix[source][destination] = 1.0;
-    }
-}
-
-/**
  * @brief Calculates the pagerank of all vertices in the graph.
  * @param pagerank The array in which store the final pageranks.
  */
@@ -141,16 +127,18 @@ void calculate_pagerank(double pagerank[])
  **/
 void generate_graph(void)
 {
+    double start = omp_get_wtime();
     initialize_graph();
- 
-    // Initialise the (pseudo-)random number generator to a given seed, to guarantee reproducibility.
-    srand(123);
-    for(int i = 0; i < GRAPH_SIZE; i++)
+    for(int i = 0; i < GRAPH_ORDER; i++)
     {
-        int source = rand() % GRAPH_ORDER;
-        int destination = rand() % GRAPH_ORDER;
-        add_edge(source, destination);
+        for(int j = 0; j < GRAPH_ORDER - i; j++)
+        {
+            int source = i;
+            int destination = j;
+            adjacency_matrix[source][destination] = 1.0;
+        }
     }
+    printf("%.2f seconds to generate the graph.\n", omp_get_wtime() - start);
 }
 
 int main(int argc, char* argv[])
@@ -175,7 +163,7 @@ int main(int argc, char* argv[])
     {
         if(i % 100 == 0)
         {
-            printf("PageRank of Node %d: %.4lf\n", i, pagerank[i]);
+            printf("PageRank of vertex %d: %.6f\n", i, pagerank[i]);
         }
         sum_ranks += pagerank[i];
     }
