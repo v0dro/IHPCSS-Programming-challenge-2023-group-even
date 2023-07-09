@@ -136,15 +136,11 @@ void calculate_pagerank(double pagerank[])
     printf("%zu iterations achieved in %.2f seconds\n", iteration, elapsed);
 }
 
-int main(int argc, char* argv[])
+/**
+ * @brief Populates the edges in the graph.
+ **/
+void generate_graph(void)
 {
-    // We do not need argc, this line silences potential compilation warnings.
-    (void) argc;
-    // We do not need argv, this line silences potential compilation warnings.
-    (void) argv;
-
-    // Get the time at the very start.
-    double start = omp_get_wtime();
     initialize_graph();
  
     // Initialise the (pseudo-)random number generator to a given seed, to guarantee reproducibility.
@@ -155,6 +151,19 @@ int main(int argc, char* argv[])
         int destination = rand() % GRAPH_ORDER;
         add_edge(source, destination);
     }
+}
+
+int main(int argc, char* argv[])
+{
+    // We do not need argc, this line silences potential compilation warnings.
+    (void) argc;
+    // We do not need argv, this line silences potential compilation warnings.
+    (void) argv;
+
+    // Get the time at the very start.
+    double start = omp_get_wtime();
+    
+    generate_graph();
  
     /// The array in which each vertex pagerank is stored.
     double pagerank[GRAPH_ORDER];
