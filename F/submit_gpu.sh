@@ -49,7 +49,7 @@ export OMP_NUM_THREADS=1;
 export OMP_PLACES=cores;
 
 # Keep the OpenMP threads where they are
-export OMP_BIND_PROC=true;
+export OMP_PROC_BIND=true;
 
 # Load the modules needed
 module load nvhpc/22.9 openmpi/4.0.5-nvhpc22.9
@@ -58,4 +58,4 @@ module load nvhpc/22.9 openmpi/4.0.5-nvhpc22.9
 make
 
 # Execute the program
-mpirun -n $MPI_PROCESS_COUNT ./bin/main
+mpirun -n $SLURM_NTASKS --bind-to none mpirun -n $MPI_PROCESS_COUNT --report-bindings ./bin/main

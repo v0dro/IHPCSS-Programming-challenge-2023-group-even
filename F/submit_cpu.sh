@@ -10,7 +10,7 @@
 # The name of the output file
 #SBATCH -o output.txt
 
-# The partition to use, GPU nodes here
+# The partition to use, shared CPU nodes in this case
 #SBATCH -p RM-shared
 
 # Jobs are capped at 30 seconds (Your code should run for ~10 seconds anyway)
@@ -19,18 +19,21 @@
 # The number of nodes (at most 2)
 #SBATCH -N 1
 
-# The number of MPI processes per node. If not using MPI, set it to 1
+# The number of MPI processes per node
 #SBATCH --ntasks-per-node=1
+
+# The number of OpenMP threads per MPI process
+#SBATCH --cpus-per-task=2
 
 # The number of OpenMP threads. If using MPI, it is the number of OpenMP threads
 # per MPI process
-export OMP_NUM_THREADS=1;
+export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 
 # Place OpenMP threads on cores
 export OMP_PLACES=cores;
 
 # Keep the OpenMP threads where they are
-export OMP_BIND_PROC=true;
+export OMP_PROC_BIND=true;
 
 # Load the modules needed
 module load nvhpc/22.9 openmpi/4.0.5-nvhpc22.9
@@ -39,4 +42,4 @@ module load nvhpc/22.9 openmpi/4.0.5-nvhpc22.9
 make
 
 # Execute the program
-mpirun -n $SLURM_NTASKS ./bin/main
+mpirun -n $SLURM_NTASKS --bind-to none --report-bindings ./bin/main
