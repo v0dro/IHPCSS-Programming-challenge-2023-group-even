@@ -137,7 +137,7 @@ void calculate_pagerank(double pagerank[])
 /**
  * @brief Populates the edges in the graph for testing.
  **/
-void generate_graph_test(void)
+void generate_nice_graph(void)
 {
     printf("Generate a graph for testing purposes (i.e.: a nice and conveniently designed graph :) )\n");
     double start = omp_get_wtime();
@@ -160,7 +160,7 @@ void generate_graph_test(void)
 /**
  * @brief Populates the edges in the graph for the challenge.
  **/
-void generate_graph_challenge(void)
+void generate_sneaky_graph(void)
 {
     printf("Generate a graph for the challenge (i.e.: a sneaky graph :P )\n");
     double start = omp_get_wtime();
@@ -187,10 +187,12 @@ int main(int argc, char* argv[])
     // We do not need argv, this line silences potential compilation warnings.
     (void) argv;
 
+    printf("This program has two graph generators: generate_nice_graph and generate_sneaky_graph. If you intend to submit, your code will be timed on the sneaky graph, remember to try both.\n");
+
     // Get the time at the very start.
     double start = omp_get_wtime();
     
-    generate_graph_challenge();
+    generate_sneaky_graph();
  
     /// The array in which each vertex pagerank is stored.
     double pagerank[GRAPH_ORDER];

@@ -32,10 +32,13 @@ PROGRAM main
     !> Redundant edges are still represented with value 1.0.
     REAL(KIND=8), DIMENSION(0:GRAPH_ORDER-1,0:GRAPH_ORDER-1) :: adjacency_matrix
 
+    WRITE(*, '(A,A)') 'This program has two graph generators: generate_nice_graph and generate_sneaky_graph. ', &
+                      'If you intend to submit, your code will be timed on the sneaky graph, remember to try both.'
+
     ! Get the time at the very start.
     start = omp_get_wtime()
     
-    CALL generate_graph_challenge()
+    CALL generate_sneaky_graph()
 
     CALL calculate_pagerank(pagerank)
 
@@ -70,7 +73,7 @@ PROGRAM main
     !> @param pagerank The array in which store the final pageranks.
     SUBROUTINE calculate_pagerank(pagerank)
         IMPLICIT NONE
-        
+
         REAL(KIND=8), DIMENSION(0:GRAPH_ORDER-1) :: pagerank
         REAL(KIND=8), DIMENSION(0:GRAPH_ORDER-1) :: new_pagerank
         REAL(KIND=8) :: pagerank_total
@@ -157,7 +160,7 @@ PROGRAM main
     END
 
     !> @brief Populates the edges in the graph for the challenge
-    SUBROUTINE generate_graph_challenge()
+    SUBROUTINE generate_sneaky_graph()
         IMPLICIT NONE
 
         INTEGER :: i
@@ -183,7 +186,7 @@ PROGRAM main
     END
 
     !> @brief Populates the edges in the graph for testing
-    SUBROUTINE generate_graph_test()
+    SUBROUTINE generate_nice_graph()
         IMPLICIT NONE
 
         INTEGER :: i
@@ -192,7 +195,7 @@ PROGRAM main
         INTEGER :: destination
         REAL(KIND=8) :: start
 
-        WRITE(*, '(A)') 'Generate a graph for testing purposes (i.e.: a nice and conveniently designed graph :) )'
+        WRITE(*, '(A)') 'Generate a graph for testing purposes (i.e.: a nice and conveniently designed graph :) ).'
         start = omp_get_wtime()
         CALL initialize_graph()
         DO i = 0, GRAPH_ORDER - 1
