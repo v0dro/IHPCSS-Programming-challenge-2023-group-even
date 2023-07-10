@@ -25,6 +25,9 @@
  * Redundant edges are still represented with value 1.0.
  */
 double adjacency_matrix[GRAPH_ORDER][GRAPH_ORDER];
+double max_diff = 0.0;
+double min_diff = 1.0;
+double total_diff = 0.0;
  
 void initialize_graph(void)
 {
@@ -52,7 +55,6 @@ void calculate_pagerank(double pagerank[])
     }
  
     double damping_value = (1.0 - DAMPING_FACTOR) / GRAPH_ORDER;
- 
     double diff = 1.0;
     size_t iteration = 0;
     double start = omp_get_wtime();
@@ -104,6 +106,9 @@ void calculate_pagerank(double pagerank[])
         {
             diff += fabs(new_pagerank[i] - pagerank[i]);
         }
+        max_diff = (max_diff < diff) ? diff : max_diff;
+        total_diff += diff;
+        min_diff = (min_diff > diff) ? diff : min_diff;
  
         for(int i = 0; i < GRAPH_ORDER; i++)
         {
@@ -125,6 +130,7 @@ void calculate_pagerank(double pagerank[])
 		iteration++;
 		time_per_iteration = elapsed / iteration;
     }
+    
     printf("%zu iterations achieved in %.2f seconds\n", iteration, elapsed);
 }
 
@@ -184,7 +190,7 @@ int main(int argc, char* argv[])
     // Get the time at the very start.
     double start = omp_get_wtime();
     
-    generate_graph_test();
+    generate_graph_challenge();
  
     /// The array in which each vertex pagerank is stored.
     double pagerank[GRAPH_ORDER];
@@ -200,7 +206,7 @@ int main(int argc, char* argv[])
         }
         sum_ranks += pagerank[i];
     }
-    printf("Sum of all pageranks = %f.\n", sum_ranks);
+    printf("Sum of all pageranks = %.12f, total diff = %.12f, max diff = %.12f and min diff = %.12f.\n", sum_ranks, total_diff, max_diff, min_diff);
     double end = omp_get_wtime();
  
     printf("Total time taken: %.2f seconds.\n", end - start);

@@ -12,7 +12,7 @@ PROGRAM main
     !> The number of vertices in the graph.
     INTEGER, PARAMETER :: GRAPH_ORDER = 1000
     !> Parameters used in pagerank convergence, do not change.
-    REAL(KIND=8), PARAMETER :: DAMPING_FACTOR = 0.85
+    REAL(KIND=8), PARAMETER :: DAMPING_FACTOR = 0.85_8
     !> The number of seconds to not exceed forthe calculation loop.
     INTEGER, PARAMETER :: MAX_TIME = 10
     REAL(KIND=8) :: start
@@ -21,6 +21,9 @@ PROGRAM main
     REAL(KIND=8), DIMENSION(0:GRAPH_ORDER-1) :: pagerank
     ! Calculates the sum of all pageranks. It should be 1.0, so it can be used as a quick verification.
     REAL(KIND=8) :: sum_ranks = 0.0
+    REAL(KIND=8) :: max_diff = 0.0
+    REAL(KIND=8) :: min_diff = 1.0
+    REAL(KIND=8) :: total_diff = 0.0
     INTEGER :: i
 
     !> @brief Indicates which vertices are connected.
@@ -32,7 +35,7 @@ PROGRAM main
     ! Get the time at the very start.
     start = omp_get_wtime()
     
-    CALL generate_graph_test()
+    CALL generate_graph_challenge()
 
     CALL calculate_pagerank(pagerank)
 
@@ -42,7 +45,9 @@ PROGRAM main
         END IF
         sum_ranks = sum_ranks + pagerank(i)
     END DO
-    WRITE(*, '(A,F0.12,A)') 'Sum of all pageranks = ', sum_ranks
+    WRITE(*, '(A,F0.12,A,F0.12,A,F0.12)') 'Sum of all pageranks = ', sum_ranks, &
+                                          ', total diff = ' , total_diff, ' max diff = ', max_diff, &
+                                          ' and min diff = ', min_diff
     end = omp_get_wtime()
 
     WRITE(*, '(A,F0.2,A)') 'Total time taken: ', end - start, ' seconds.'
@@ -64,12 +69,14 @@ PROGRAM main
     !> @brief Calculates the pagerank of all vertices in the graph.
     !> @param pagerank The array in which store the final pageranks.
     SUBROUTINE calculate_pagerank(pagerank)
+        IMPLICIT NONE
+        
         REAL(KIND=8), DIMENSION(0:GRAPH_ORDER-1) :: pagerank
         REAL(KIND=8), DIMENSION(0:GRAPH_ORDER-1) :: new_pagerank
         REAL(KIND=8) :: pagerank_total
-        REAL(KIND=8) :: initial_rank = 1.0 / REAL(GRAPH_ORDER, KIND=8);
-        REAL(KIND=8) :: damping_value = (1.0 - DAMPING_FACTOR) / REAL(GRAPH_ORDER, KIND=8)
-        REAL(KIND=8) :: diff = 1.0
+        REAL(KIND=8) :: initial_rank = 1.0_8 / REAL(GRAPH_ORDER, KIND=8);
+        REAL(KIND=8) :: damping_value = (1.0_8 - DAMPING_FACTOR) / REAL(GRAPH_ORDER, KIND=8)
+        REAL(KIND=8) :: diff = 0.0
         INTEGER(KIND=8) :: iteration = 0
         REAL(KIND=8) :: start
         REAL(KIND=8) :: elapsed
@@ -82,7 +89,7 @@ PROGRAM main
         INTEGER :: k
         INTEGER :: source_i
         INTEGER :: destination_i
-    
+
         ! Initialise all vertices to 1/n.
         DO i = 0, GRAPH_ORDER - 1
             pagerank(i) = initial_rank
@@ -124,6 +131,9 @@ PROGRAM main
             DO i = 0, GRAPH_ORDER - 1
                 diff = diff + ABS(new_pagerank(i) - pagerank(i))
             END DO
+            max_diff = MAX(max_diff, diff)
+            min_diff = MIN(min_diff, diff)
+            total_diff = total_diff + diff
     
             DO i = 0, GRAPH_ORDER - 1
                 pagerank(i) = new_pagerank(i)
