@@ -160,7 +160,7 @@ PROGRAM main
         start = omp_get_wtime()
         CALL initialize_graph()
         DO i = 0, GRAPH_ORDER - 1
-            DO j = 0, GRAPH_ORDER - i
+            DO j = 0, GRAPH_ORDER - i - 1
                 source = i
                 destination = j
                 IF (i .NE. j) THEN
