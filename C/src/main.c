@@ -109,6 +109,16 @@ void calculate_pagerank(double pagerank[])
         {
             pagerank[i] = new_pagerank[i];
         }
+            
+        double pagerank_total = 0.0;
+        for(int i = 0; i < GRAPH_ORDER; i++)
+        {
+            pagerank_total += pagerank[i];
+        }
+        if(fabs(pagerank_total - 1.0) >= 1.0)
+        {
+            printf("[ERROR] Iteration %zu: sum of all pageranks is not 1 but %.12f.\n", iteration, pagerank_total);
+        }
  
 		double iteration_end = omp_get_wtime();
 		elapsed = omp_get_wtime() - start;
@@ -119,10 +129,34 @@ void calculate_pagerank(double pagerank[])
 }
 
 /**
- * @brief Populates the edges in the graph.
+ * @brief Populates the edges in the graph for testing.
  **/
-void generate_graph(void)
+void generate_graph_test(void)
 {
+    printf("Generate a graph for testing purposes (i.e.: a nice and conveniently designed graph :) )\n");
+    double start = omp_get_wtime();
+    initialize_graph();
+    for(int i = 0; i < GRAPH_ORDER; i++)
+    {
+        for(int j = 0; j < GRAPH_ORDER; j++)
+        {
+            int source = i;
+            int destination = j;
+            if(i != j)
+            {
+                adjacency_matrix[source][destination] = 1.0;
+            }
+        }
+    }
+    printf("%.2f seconds to generate the graph.\n", omp_get_wtime() - start);
+}
+
+/**
+ * @brief Populates the edges in the graph for the challenge.
+ **/
+void generate_graph_challenge(void)
+{
+    printf("Generate a graph for the challenge (i.e.: a sneaky graph :P )\n");
     double start = omp_get_wtime();
     initialize_graph();
     for(int i = 0; i < GRAPH_ORDER; i++)
@@ -131,7 +165,10 @@ void generate_graph(void)
         {
             int source = i;
             int destination = j;
-            adjacency_matrix[source][destination] = 1.0;
+            if(i != j)
+            {
+                adjacency_matrix[source][destination] = 1.0;
+            }
         }
     }
     printf("%.2f seconds to generate the graph.\n", omp_get_wtime() - start);
@@ -147,7 +184,7 @@ int main(int argc, char* argv[])
     // Get the time at the very start.
     double start = omp_get_wtime();
     
-    generate_graph();
+    generate_graph_test();
  
     /// The array in which each vertex pagerank is stored.
     double pagerank[GRAPH_ORDER];
