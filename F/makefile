@@ -1,5 +1,5 @@
 CC=mpifort
-CFLAGS=-O3 -Wall -mp=gpu -fopenmp
+CFLAGS=-O2 -Wall -mp=gpu -fopenmp
 
 default: all
 

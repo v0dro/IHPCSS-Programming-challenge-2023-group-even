@@ -1,5 +1,5 @@
 CC=mpicc
-CFLAGS=-O3 -Wall -mp=gpu -fopenmp
+CFLAGS=-O2 -Wall -mp=gpu -fopenmp -lm
 
 default: all
 
