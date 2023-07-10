@@ -58,4 +58,4 @@ module load nvhpc/22.9 openmpi/4.0.5-nvhpc22.9
 make
 
 # Execute the program
-mpirun -n $SLURM_NTASKS --bind-to none mpirun -n $MPI_PROCESS_COUNT --report-bindings ./bin/main
+mpirun --bind-to none mpirun -n $MPI_PROCESS_COUNT --report-bindings ./bin/main
