@@ -29,13 +29,18 @@ double max_diff = 0.0;
 double min_diff = 1.0;
 double total_diff = 0.0;
 
+int offsets[GRAPH_ORDER+1];
+int indices[GRAPH_ORDER*GRAPH_ORDER];
+
 void initialize_graph(void)
 {
   for(int i = 0; i < GRAPH_ORDER; i++)
     {
+      offsets[i] = 0;
       for(int j = 0; j < GRAPH_ORDER; j++)
         {
-          adjacency_matrix[i][j] = 0.0;
+          /* adjacency_matrix[i][j] = 0.0; */
+          indices[i * GRAPH_ORDER + j] = 0;
         }
     }
 }
@@ -75,18 +80,15 @@ void calculate_pagerank(double pagerank[])
         new_pagerank[i] = 0.0;
       }
 
-      for(int j = 0; j < GRAPH_ORDER; j++) {
-        for(int i = 0; i < GRAPH_ORDER; i++) {
-          if (adjacency_matrix[j][i] == 1.0) {
-            int outdegree = 0;
 
-            for(int k = 0; k < GRAPH_ORDER; k++) {
-              if (adjacency_matrix[j][k] == 1.0) {
-                outdegree++;
-              }
-            }
-            new_pagerank[i] += pagerank[j] / (double)outdegree;
+      for (int j = 0; j < GRAPH_ORDER; ++j) {
+        for (int i = offsets[j]; i < offsets[j+1]; ++i) {
+          int i_node = indices[i];
+          int outdegree = 0;
+          for (int k = offsets[j]; k < offsets[j+1]; ++k) {
+            outdegree++;
           }
+          new_pagerank[i_node] += pagerank[j] / (double)outdegree;
         }
       }
 
@@ -158,19 +160,22 @@ void generate_sneaky_graph(void)
   printf("Generate a graph for the challenge (i.e.: a sneaky graph :P )\n");
   double start = omp_get_wtime();
   initialize_graph();
-  for(int i = 0; i < GRAPH_ORDER; i++)
-    {
-      for(int j = 0; j < GRAPH_ORDER - i; j++)
-        {
-          int source = i;
-          int destination = j;
-          if(i != j)
-            {
-              adjacency_matrix[source][destination] = 1.0;
-            }
+  int csr_index = 0;
+  offsets[0] = 0;
+  for(int i = 0; i < GRAPH_ORDER; i++) {
+    int non_zeros = 0;
+    for(int j = 0; j < GRAPH_ORDER - i; j++) {
+      int destination = j;
+      if(i != j) {
+          indices[csr_index] = destination;
+          non_zeros++;
+          csr_index++;
         }
     }
+    offsets[i+1] = offsets[i] + non_zeros;
+  }
   printf("%.2f seconds to generate the graph.\n", omp_get_wtime() - start);
+
 }
 
 int main(int argc, char* argv[])
