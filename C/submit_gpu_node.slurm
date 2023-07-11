@@ -8,7 +8,7 @@
 # SLURM will think the line is no-longer a special comment and will ignore it.
 
 # The name of the output file
-#SBATCH -o output.txt
+#SBATCH -o output_gpu.txt
 
 # The budget account to use
 # SBATCH -A=tra210016p
@@ -58,4 +58,4 @@ module load nvhpc/22.9 openmpi/4.0.5-nvhpc22.9
 make
 
 # Execute the program
-mpirun --bind-to none mpirun -n $MPI_PROCESS_COUNT --report-bindings ./bin/main
+mpirun --bind-to none -n $MPI_PROCESS_COUNT --report-bindings ./bin/main
