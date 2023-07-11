@@ -8,7 +8,7 @@
 # SLURM will think the line is no-longer a special comment and will ignore it.
 
 # The name of the output file
-#SBATCH -o output.txt
+#SBATCH -o output_gpu.txt
 
 # The budget account to use
 # SBATCH -A=tra210016p
@@ -21,7 +21,7 @@
 # will be your first one. Remember to update it the days that follow :)
 # If you do *not* use a reservation, simply insert a space between '#' and
 # 'SBATCH', it will turn the line into a plain comment.
-# SBATCH --res ihpcssday2GPU2
+#SBATCH --res ihpcssday2GPU2
 
 # The partition to use, GPU nodes here
 #SBATCH -p GPU-shared
