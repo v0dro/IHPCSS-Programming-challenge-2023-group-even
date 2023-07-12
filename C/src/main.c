@@ -71,10 +71,9 @@ void calculate_pagerank(double pagerank[])
   while(elapsed < MAX_TIME && (elapsed + time_per_iteration) < MAX_TIME) {
     double iteration_start = omp_get_wtime();
 
-    for(int i = 0; i < GRAPH_ORDER; i++) {
+    for (int i = 0; i < GRAPH_ORDER; ++i) {
       new_pagerank[i] = 0.0;
     }
-
 
     for (int j = 0; j < GRAPH_ORDER; ++j) {
       for (int i = offsets[j]; i < offsets[j+1]; ++i) {
@@ -180,14 +179,12 @@ int main(int argc, char* argv[])
 
   // Calculates the sum of all pageranks. It should be 1.0, so it can be used as a quick verification.
   double sum_ranks = 0.0;
-  for(int i = 0; i < GRAPH_ORDER; i++)
-    {
-      if(i % 100 == 0)
-        {
-          printf("PageRank of vertex %d: %.6f\n", i, pagerank[i]);
-        }
-      sum_ranks += pagerank[i];
+  for(int i = 0; i < GRAPH_ORDER; i++) {
+    if(i % 100 == 0) {
+      printf("PageRank of vertex %d: %.6f\n", i, pagerank[i]);
     }
+    sum_ranks += pagerank[i];
+  }
   printf("Sum of all pageranks = %.12f, total diff = %.12f, max diff = %.12f and min diff = %.12f.\n", sum_ranks, total_diff, max_diff, min_diff);
   double end = omp_get_wtime();
 
