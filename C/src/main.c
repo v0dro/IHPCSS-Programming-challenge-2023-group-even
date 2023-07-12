@@ -18,6 +18,8 @@
 /// The number of seconds to not exceed forthe calculation loop.
 #define MAX_TIME 10
 
+int MPI_RANK, MPI_SIZE;
+
 /**
  * @brief Indicates which vertices are connected.
  * @details If an edge links vertex A to vertex B, then adjacency_matrix[A][B]
@@ -31,6 +33,15 @@ double total_diff = 0.0;
 
 int offsets[GRAPH_ORDER+1];
 int indices[GRAPH_ORDER*GRAPH_ORDER];
+
+const int CSR_ROW_OFFSETS[2] = {0, 1000};
+
+/* 0, 293 */
+
+/* convert global row to local row index for the CSR row. */
+int csr_row_g2i(int row) {
+  return row - CSR_ROW_OFFSETS[MPI_RANK];
+}
 
 void initialize_graph(void)
 {
@@ -48,12 +59,16 @@ void initialize_graph(void)
 /**
  * @brief Calculates the pagerank of all vertices in the graph.
  * @param pagerank The array in which store the final pageranks.
+
+ * The pagerank and new_pagerank arrays are distributed as follows:
+ * [0, ... , CSR_ROW_OFFSETS[0], ..., CSR_ROW_OFFSETS[1]]
+ *      ^ rank0                   ^ rank1
  */
 void calculate_pagerank(double pagerank[])
 {
   double initial_rank = 1.0 / GRAPH_ORDER;
   double new_pagerank[GRAPH_ORDER];
-  for(int i = 0; i < GRAPH_ORDER; i++) {
+  for(int i = CSR_ROW_OFFSETS[MPI_RANK]; i < CSR_ROW_OFFSETS[MPI_RANK+1]; i++) {
     // Initialise all vertices to 1/n.
     pagerank[i] = initial_rank;
     new_pagerank[i] = 0.0;
@@ -71,19 +86,19 @@ void calculate_pagerank(double pagerank[])
   while(elapsed < MAX_TIME && (elapsed + time_per_iteration) < MAX_TIME) {
     double iteration_start = omp_get_wtime();
 
-    for(int i = 0; i < GRAPH_ORDER; i++) {
+    for(int i = CSR_ROW_OFFSETS[MPI_RANK]; i < CSR_ROW_OFFSETS[MPI_RANK+1]; i++) {
       new_pagerank[i] = 0.0;
     }
 
+    for (int j = CSR_ROW_OFFSETS[MPI_RANK]; j < CSR_ROW_OFFSETS[MPI_RANK+1]; ++j) {
+      int local_j = csr_row_g2i(j);
 
-    for (int j = 0; j < GRAPH_ORDER; ++j) {
-      for (int i = offsets[j]; i < offsets[j+1]; ++i) {
+      for (int i = offsets[local_j]; i < offsets[local_j+1]; ++i) {
         int i_node = indices[i];
-        int outdegree = offsets[j+1] - offsets[j];
+        int outdegree = offsets[local_j+1] - offsets[local_j];
         new_pagerank[i_node] += pagerank[j] / (double)outdegree;
       }
     }
-
 
     diff = 0.0;
     double pagerank_total = 0.0;
@@ -100,7 +115,8 @@ void calculate_pagerank(double pagerank[])
 
 
     if(fabs(pagerank_total - 1.0) >= 1.0) {
-      printf("[ERROR] Iteration %zu: sum of all pageranks is not 1 but %.12f.\n", iteration, pagerank_total);
+      printf("[ERROR] Iteration %zu: sum of all pageranks is not 1 but %.12f.\n",
+             iteration, pagerank_total);
     }
 
     double iteration_end = omp_get_wtime();
@@ -145,7 +161,7 @@ void generate_sneaky_graph(void)
   initialize_graph();
   int csr_index = 0;
   offsets[0] = 0;
-  for(int i = 0; i < GRAPH_ORDER; i++) {
+  for(int i = CSR_ROW_OFFSETS[MPI_RANK]; i < CSR_ROW_OFFSETS[MPI_RANK+1]; i++) {
     int non_zeros = 0;
     for(int j = 0; j < GRAPH_ORDER - i; j++) {
       int destination = j;
@@ -155,7 +171,9 @@ void generate_sneaky_graph(void)
         csr_index++;
       }
     }
-    offsets[i+1] = offsets[i] + non_zeros;
+
+    int local_i = csr_row_g2i(i);
+    offsets[local_i+1] = offsets[local_i] + non_zeros;
   }
   printf("%.2f seconds to generate the graph.\n", omp_get_wtime() - start);
 }
@@ -166,6 +184,10 @@ int main(int argc, char* argv[])
   (void) argc;
   // We do not need argv, this line silences potential compilation warnings.
   (void) argv;
+
+  MPI_Init(NULL, NULL);
+  MPI_Comm_size(MPI_COMM_WORLD, &MPI_SIZE);
+  MPI_Comm_rank(MPI_COMM_WORLD, &MPI_RANK);
 
   printf("This program has two graph generators: generate_nice_graph and generate_sneaky_graph. If you intend to submit, your code will be timed on the sneaky graph, remember to try both.\n");
 
@@ -192,6 +214,8 @@ int main(int argc, char* argv[])
   double end = omp_get_wtime();
 
   printf("Total time taken: %.2f seconds.\n", end - start);
+
+  MPI_Finalize();
 
   return 0;
 }
