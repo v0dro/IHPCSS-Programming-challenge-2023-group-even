@@ -69,7 +69,7 @@ void calculate_pagerank(double pagerank[])
   double initial_rank = 1.0 / GRAPH_ORDER;
   double new_pagerank[GRAPH_ORDER], local_new_pagerank[GRAPH_ORDER];
 
-  double local_pagerank_total = 0, global_pagerank_total;
+  double pagerank_total = 0;
   for(int i = 0; i < GRAPH_ORDER; ++i) {
     // Initialise all vertices to 1/n.
     pagerank[i] = initial_rank;
@@ -77,7 +77,7 @@ void calculate_pagerank(double pagerank[])
   }
 
   double damping_value = (1.0 - DAMPING_FACTOR) / GRAPH_ORDER;
-  double local_diff, global_diff;
+  double diff;
   size_t iteration = 0;
   double start = omp_get_wtime();
   double global_elapsed = omp_get_wtime() - start;
@@ -105,25 +105,23 @@ void calculate_pagerank(double pagerank[])
     MPI_Allreduce(local_new_pagerank, new_pagerank, GRAPH_ORDER,
                   MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-    local_diff = 0.0;
-    double local_pagerank_total = 0.0, global_pagerank_total;
+    diff = 0.0;
+    pagerank_total = 0.0;
 
     for (int i = 0; i < GRAPH_ORDER; ++i) {
       new_pagerank[i] = DAMPING_FACTOR * new_pagerank[i] + damping_value;
-      local_diff += fabs(new_pagerank[i] - pagerank[i]);
+      diff += fabs(new_pagerank[i] - pagerank[i]);
       pagerank[i] = new_pagerank[i];
-      local_pagerank_total += pagerank[i];
+      pagerank_total += pagerank[i];
     }
-    global_diff = local_diff;
-    global_pagerank_total = local_pagerank_total;
 
-    max_diff = (max_diff < global_diff) ? global_diff : max_diff;
-    total_diff += global_diff;
-    min_diff = (min_diff > global_diff) ? global_diff : min_diff;
+    max_diff = (max_diff < diff) ? diff : max_diff;
+    total_diff += diff;
+    min_diff = (min_diff > diff) ? diff : min_diff;
 
-    if(fabs(global_pagerank_total - 1.0) >= 1.0) {
+    if(fabs(pagerank_total - 1.0) >= 1.0) {
       printf("[ERROR] Iteration %zu: sum of all pageranks is not 1 but %.12f.\n",
-             iteration, global_pagerank_total);
+             iteration, pagerank_total);
     }
 
     double iteration_end = omp_get_wtime();
@@ -134,8 +132,10 @@ void calculate_pagerank(double pagerank[])
     time_per_iteration = global_elapsed / iteration;
   }
 
-  printf("%zu iterations achieved in %.2f seconds MPI_RANK: %d\n",
-         iteration, global_elapsed, MPI_RANK);
+  if (!MPI_RANK) {
+    printf("%zu iterations achieved in %.2f seconds\n",
+           iteration, global_elapsed);
+  }
 }
 
 /**
