@@ -67,8 +67,10 @@ void initialize_graph(void)
 void calculate_pagerank(double pagerank[])
 {
   double initial_rank = 1.0 / GRAPH_ORDER;
-  double new_pagerank[GRAPH_ORDER];
-  for(int i = CSR_ROW_OFFSETS[MPI_RANK]; i < CSR_ROW_OFFSETS[MPI_RANK+1]; i++) {
+  double new_pagerank[GRAPH_ORDER], local_new_pagerank[GRAPH_ORDER];
+
+  double local_pagerank_total = 0, global_pagerank_total;
+  for(int i = 0; i < GRAPH_ORDER; ++i) {
     // Initialise all vertices to 1/n.
     pagerank[i] = initial_rank;
     new_pagerank[i] = 0.0;
@@ -78,16 +80,16 @@ void calculate_pagerank(double pagerank[])
   double local_diff, global_diff;
   size_t iteration = 0;
   double start = omp_get_wtime();
-  double elapsed = omp_get_wtime() - start;
+  double global_elapsed = omp_get_wtime() - start;
   double time_per_iteration = 0;
 
-
   // If we exceeded the MAX_TIME seconds, we stop. If we typically spend X seconds on an iteration, and we are less than X seconds away from MAX_TIME, we stop.
-  while(elapsed < MAX_TIME && (elapsed + time_per_iteration) < MAX_TIME) {
+  while(global_elapsed < MAX_TIME && (global_elapsed + time_per_iteration) < MAX_TIME) {
     double iteration_start = omp_get_wtime();
 
-    for(int i = CSR_ROW_OFFSETS[MPI_RANK]; i < CSR_ROW_OFFSETS[MPI_RANK+1]; i++) {
+    for(int i = 0; i < GRAPH_ORDER; i++) {
       new_pagerank[i] = 0.0;
+      local_new_pagerank[i] = 0.0;
     }
 
     for (int j = CSR_ROW_OFFSETS[MPI_RANK]; j < CSR_ROW_OFFSETS[MPI_RANK+1]; ++j) {
@@ -96,23 +98,24 @@ void calculate_pagerank(double pagerank[])
       for (int i = offsets[local_j]; i < offsets[local_j+1]; ++i) {
         int i_node = indices[i];
         int outdegree = offsets[local_j+1] - offsets[local_j];
-        new_pagerank[i_node] += pagerank[j] / (double)outdegree;
+        local_new_pagerank[i_node] += pagerank[j] / (double)outdegree;
       }
     }
+
+    MPI_Allreduce(local_new_pagerank, new_pagerank, GRAPH_ORDER,
+                  MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
     local_diff = 0.0;
     double local_pagerank_total = 0.0, global_pagerank_total;
 
-    for(int i = CSR_ROW_OFFSETS[MPI_RANK]; i < CSR_ROW_OFFSETS[MPI_RANK+1]; i++) {
+    for (int i = 0; i < GRAPH_ORDER; ++i) {
       new_pagerank[i] = DAMPING_FACTOR * new_pagerank[i] + damping_value;
       local_diff += fabs(new_pagerank[i] - pagerank[i]);
       pagerank[i] = new_pagerank[i];
       local_pagerank_total += pagerank[i];
     }
-    MPI_Allreduce(&local_pagerank_total, &global_pagerank_total,
-                  1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(&local_diff, &global_diff,
-                  1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    global_diff = local_diff;
+    global_pagerank_total = local_pagerank_total;
 
     max_diff = (max_diff < global_diff) ? global_diff : max_diff;
     total_diff += global_diff;
@@ -124,12 +127,15 @@ void calculate_pagerank(double pagerank[])
     }
 
     double iteration_end = omp_get_wtime();
-    elapsed = omp_get_wtime() - start;
+    double local_elapsed = omp_get_wtime() - start;
+    MPI_Allreduce(&local_elapsed, &global_elapsed, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+
     iteration++;
-    time_per_iteration = elapsed / iteration;
+    time_per_iteration = global_elapsed / iteration;
   }
 
-  printf("%zu iterations achieved in %.2f seconds\n", iteration, elapsed);
+  printf("%zu iterations achieved in %.2f seconds MPI_RANK: %d\n",
+         iteration, global_elapsed, MPI_RANK);
 }
 
 /**
@@ -180,6 +186,7 @@ void generate_sneaky_graph(void)
     offsets[local_i+1] = offsets[local_i] + non_zeros;
   }
   printf("%.2f seconds to generate the graph.\n", omp_get_wtime() - start);
+
 }
 
 int main(int argc, char* argv[])
@@ -215,14 +222,17 @@ int main(int argc, char* argv[])
   calculate_pagerank(pagerank);
 
   // Calculates the sum of all pageranks. It should be 1.0, so it can be used as a quick verification.
-  double sum_ranks = 0.0;
-  for(int i = 0; i < GRAPH_ORDER; i++) {
+  double local_sum_ranks = 0.0, global_sum_ranks;
+  for(int i = CSR_ROW_OFFSETS[MPI_RANK]; i < CSR_ROW_OFFSETS[MPI_RANK+1]; i++) {
     if(i % 100 == 0) {
         printf("PageRank of vertex %d: %.6f\n", i, pagerank[i]);
     }
-    sum_ranks += pagerank[i];
+    local_sum_ranks += pagerank[i];
   }
-  printf("Sum of all pageranks = %.12f, total diff = %.12f, max diff = %.12f and min diff = %.12f.\n", sum_ranks, total_diff, max_diff, min_diff);
+  MPI_Allreduce(&local_sum_ranks, &global_sum_ranks, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  if (MPI_RANK == 0) {
+    printf("Sum of all pageranks = %.12f, total diff = %.12f, max diff = %.12f and min diff = %.12f.\n", global_sum_ranks, total_diff, max_diff, min_diff);
+  }
   double end = omp_get_wtime();
 
   printf("Total time taken: %.2f seconds.\n", end - start);

@@ -1,5 +1,6 @@
 CC=mpicc
-CFLAGS=-O2 -Wall -mp=gpu -fopenmp -lm
+# CFLAGS=-O2 -Wall -mp=gpu -lm -fopenmp
+CFLAGS=-O2 -Wall -lm -I"$(shell brew --prefix libomp)/include" -L"$(shell brew --prefix libomp)/lib" -lomp
 BIN_DIR=bin
 
 default: all
