@@ -75,7 +75,7 @@ void calculate_pagerank(double pagerank[])
   }
 
   double damping_value = (1.0 - DAMPING_FACTOR) / GRAPH_ORDER;
-  double diff = 1.0;
+  double local_diff, global_diff;
   size_t iteration = 0;
   double start = omp_get_wtime();
   double elapsed = omp_get_wtime() - start;
@@ -100,23 +100,27 @@ void calculate_pagerank(double pagerank[])
       }
     }
 
-    diff = 0.0;
-    double pagerank_total = 0.0;
+    local_diff = 0.0;
+    double local_pagerank_total = 0.0, global_pagerank_total;
 
-    for(int i = 0; i < GRAPH_ORDER; i++) {
+    for(int i = CSR_ROW_OFFSETS[MPI_RANK]; i < CSR_ROW_OFFSETS[MPI_RANK+1]; i++) {
       new_pagerank[i] = DAMPING_FACTOR * new_pagerank[i] + damping_value;
-      diff += fabs(new_pagerank[i] - pagerank[i]);
+      local_diff += fabs(new_pagerank[i] - pagerank[i]);
       pagerank[i] = new_pagerank[i];
-      pagerank_total += pagerank[i];
+      local_pagerank_total += pagerank[i];
     }
-    max_diff = (max_diff < diff) ? diff : max_diff;
-    total_diff += diff;
-    min_diff = (min_diff > diff) ? diff : min_diff;
+    MPI_Allreduce(&local_pagerank_total, &global_pagerank_total,
+                  1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&local_diff, &global_diff,
+                  1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
+    max_diff = (max_diff < global_diff) ? global_diff : max_diff;
+    total_diff += global_diff;
+    min_diff = (min_diff > global_diff) ? global_diff : min_diff;
 
-    if(fabs(pagerank_total - 1.0) >= 1.0) {
+    if(fabs(global_pagerank_total - 1.0) >= 1.0) {
       printf("[ERROR] Iteration %zu: sum of all pageranks is not 1 but %.12f.\n",
-             iteration, pagerank_total);
+             iteration, global_pagerank_total);
     }
 
     double iteration_end = omp_get_wtime();
@@ -202,14 +206,12 @@ int main(int argc, char* argv[])
 
   // Calculates the sum of all pageranks. It should be 1.0, so it can be used as a quick verification.
   double sum_ranks = 0.0;
-  for(int i = 0; i < GRAPH_ORDER; i++)
-    {
-      if(i % 100 == 0)
-        {
-          printf("PageRank of vertex %d: %.6f\n", i, pagerank[i]);
-        }
-      sum_ranks += pagerank[i];
+  for(int i = 0; i < GRAPH_ORDER; i++) {
+    if(i % 100 == 0) {
+        printf("PageRank of vertex %d: %.6f\n", i, pagerank[i]);
     }
+    sum_ranks += pagerank[i];
+  }
   printf("Sum of all pageranks = %.12f, total diff = %.12f, max diff = %.12f and min diff = %.12f.\n", sum_ranks, total_diff, max_diff, min_diff);
   double end = omp_get_wtime();
 
