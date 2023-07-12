@@ -11,7 +11,9 @@
 #SBATCH -o output.txt
 
 # The partition to use, shared CPU nodes in this case
-#SBATCH -p RM-shared
+#SBATCH -p GPU-shared
+
+#SBATCH --gres=gpu:v100-16:1
 
 # Jobs are capped at 30 seconds (Your code should run for ~10 seconds anyway)
 #SBATCH -t 00:00:30

@@ -34,7 +34,7 @@ double total_diff = 0.0;
 int offsets[GRAPH_ORDER+1];
 int indices[GRAPH_ORDER*GRAPH_ORDER];
 
-const int CSR_ROW_OFFSETS[2] = {0, 1000};
+int CSR_ROW_OFFSETS[3];
 
 /* 0, 293 */
 
@@ -192,6 +192,16 @@ int main(int argc, char* argv[])
   MPI_Init(NULL, NULL);
   MPI_Comm_size(MPI_COMM_WORLD, &MPI_SIZE);
   MPI_Comm_rank(MPI_COMM_WORLD, &MPI_RANK);
+
+  CSR_ROW_OFFSETS[0] = 0;
+
+  if (MPI_SIZE == 1) {
+    CSR_ROW_OFFSETS[1] = 1000;
+  }
+  else if (MPI_SIZE == 2) {
+    CSR_ROW_OFFSETS[1] = 293;
+    CSR_ROW_OFFSETS[2] = 1000;
+  }
 
   printf("This program has two graph generators: generate_nice_graph and generate_sneaky_graph. If you intend to submit, your code will be timed on the sneaky graph, remember to try both.\n");
 
