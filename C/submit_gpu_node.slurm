@@ -24,22 +24,25 @@
 # SBATCH --res ihpcssday2GPU2
 
 # The partition to use, GPU nodes here
-#SBATCH -p GPU-shared
+#SBATCH -p GPU
 
 # The type and number of GPUs to use per node (8 per node, so 8 = 1 full node).
 # There are 8 GPUs per node, so each GPU is also allocated 1/8th of the all
 # resources on the node (1/8th of the RAM, 1/8th of the cores etc...)
 # To change the number of GPUs, change the last number --gres=<x>:<y>:<this_one>
-#SBATCH --gres=gpu:v100-16:1
+#SBATCH --gres=gpu:v100-16:8
 
 # Jobs are capped at 30 seconds (Your code should run for ~10 seconds anyway)
 #SBATCH -t 00:00:30
+
+# The number of MPI processes per node
+#SBATCH --ntasks-per-node=1
 
 # The number of nodes (at most 2)
 #SBATCH -N 2
 
 # The number of MPI processes
-export MPI_PROCESS_COUNT=1;
+export MPI_PROCESS_COUNT=$SLURM_NTASKS;
 
 # The number of OpenMP threads. If using MPI, it is the number of OpenMP threads
 # per MPI process
