@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <omp.h>
-#include <mpi.h>
+/* #include <mpi.h> */
 
 /// The number of vertices in the graph.
 #define GRAPH_ORDER 1000
@@ -29,10 +29,7 @@ double max_diff = 0.0;
 double min_diff = 1.0;
 double total_diff = 0.0;
 
-int offsets[GRAPH_ORDER+1];
-int indices[GRAPH_ORDER*GRAPH_ORDER];
-
-void initialize_graph(void)
+void initialize_graph(int* offsets, int* indices)
 {
   for(int i = 0; i < GRAPH_ORDER; i++)
     {
@@ -49,7 +46,7 @@ void initialize_graph(void)
  * @brief Calculates the pagerank of all vertices in the graph.
  * @param pagerank The array in which store the final pageranks.
  */
-void calculate_pagerank(double pagerank[])
+void calculate_pagerank(int* offsets, int* indices, double pagerank[])
 {
   double initial_rank = 1.0 / GRAPH_ORDER;
   double new_pagerank[GRAPH_ORDER];
@@ -99,7 +96,8 @@ void calculate_pagerank(double pagerank[])
 
 
     if(fabs(pagerank_total - 1.0) >= 1.0) {
-      printf("[ERROR] Iteration %zu: sum of all pageranks is not 1 but %.12f.\n", iteration, pagerank_total);
+      printf("[ERROR] Iteration %zu: sum of all pageranks is not 1 but %.12f.\n",
+             iteration, pagerank_total);
     }
 
     double iteration_end = omp_get_wtime();
@@ -114,34 +112,34 @@ void calculate_pagerank(double pagerank[])
 /**
  * @brief Populates the edges in the graph for testing.
  **/
-void generate_nice_graph(void)
-{
-  printf("Generate a graph for testing purposes (i.e.: a nice and conveniently designed graph :) )\n");
-  double start = omp_get_wtime();
-  initialize_graph();
-  for(int i = 0; i < GRAPH_ORDER; i++)
-    {
-      for(int j = 0; j < GRAPH_ORDER; j++)
-        {
-          int source = i;
-          int destination = j;
-          if(i != j)
-            {
-              adjacency_matrix[source][destination] = 1.0;
-            }
-        }
-    }
-  printf("%.2f seconds to generate the graph.\n", omp_get_wtime() - start);
-}
+/* void generate_nice_graph(void) */
+/* { */
+/*   printf("Generate a graph for testing purposes (i.e.: a nice and conveniently designed graph :) )\n"); */
+/*   double start = omp_get_wtime(); */
+/*   initialize_graph(); */
+/*   for(int i = 0; i < GRAPH_ORDER; i++) */
+/*     { */
+/*       for(int j = 0; j < GRAPH_ORDER; j++) */
+/*         { */
+/*           int source = i; */
+/*           int destination = j; */
+/*           if(i != j) */
+/*             { */
+/*               adjacency_matrix[source][destination] = 1.0; */
+/*             } */
+/*         } */
+/*     } */
+/*   printf("%.2f seconds to generate the graph.\n", omp_get_wtime() - start); */
+/* } */
 
 /**
  * @brief Populates the edges in the graph for the challenge.
  **/
-void generate_sneaky_graph(void)
+inline void generate_sneaky_graph(int *offsets, int *indices)
 {
-  printf("Generate a graph for the challenge (i.e.: a sneaky graph :P )\n");
+  /* printf("Generate a graph for the challenge (i.e.: a sneaky graph :P )\n"); */
   double start = omp_get_wtime();
-  initialize_graph();
+  initialize_graph(offsets, indices);
   int csr_index = 0;
   offsets[0] = 0;
   for(int i = 0; i < GRAPH_ORDER; i++) {
@@ -156,7 +154,7 @@ void generate_sneaky_graph(void)
     }
     offsets[i+1] = offsets[i] + non_zeros;
   }
-  printf("%.2f seconds to generate the graph.\n", omp_get_wtime() - start);
+  /* printf("%.2f seconds to generate the graph.\n", omp_get_wtime() - start); */
 }
 
 int main(int argc, char* argv[])
@@ -167,25 +165,36 @@ int main(int argc, char* argv[])
   (void) argv;
 
   printf("This program has two graph generators: generate_nice_graph and generate_sneaky_graph. If you intend to submit, your code will be timed on the sneaky graph, remember to try both.\n");
+  double sum_ranks;
+
+  int *offsets, *indices;
+  offsets = (int*)malloc(sizeof(int) * (GRAPH_ORDER+1));
+  indices = (int*)malloc(sizeof(int) * (GRAPH_ORDER * GRAPH_ORDER));
 
   // Get the time at the very start.
   double start = omp_get_wtime();
 
-  generate_sneaky_graph();
+/* #pragma omp target data map(to: offsets[0:GRAPH_ORDER+1]) map(to: indices[GRAPH_ORDER*GRAPH_ORDER]) map(tofrom: sum_ranks) map(tofrom: max_diff) map(tofrom: min_diff) map(tofrom: total_diff) */
+/*   { */
 
-  /// The array in which each vertex pagerank is stored.
-  double pagerank[GRAPH_ORDER];
-  calculate_pagerank(pagerank);
+  generate_sneaky_graph(offsets, indices);
 
-  // Calculates the sum of all pageranks. It should be 1.0, so it can be used as a quick verification.
-  double sum_ranks = 0.0;
-  for(int i = 0; i < GRAPH_ORDER; i++) {
-    if(i % 100 == 0) {
-      printf("PageRank of vertex %d: %.6f\n", i, pagerank[i]);
+    /// The array in which each vertex pagerank is stored.
+    double pagerank[GRAPH_ORDER];
+    calculate_pagerank(offsets, indices, pagerank);
+
+    // Calculates the sum of all pageranks. It should be 1.0, so it can be used as a quick verification.
+    sum_ranks = 0.0;
+    for(int i = 0; i < GRAPH_ORDER; i++) {
+      if(i % 100 == 0) {
+        printf("PageRank of vertex %d: %.6f\n", i, pagerank[i]);
+      }
+      sum_ranks += pagerank[i];
     }
-    sum_ranks += pagerank[i];
-  }
+  /* } */
+
   printf("Sum of all pageranks = %.12f, total diff = %.12f, max diff = %.12f and min diff = %.12f.\n", sum_ranks, total_diff, max_diff, min_diff);
+
   double end = omp_get_wtime();
 
   printf("Total time taken: %.2f seconds.\n", end - start);

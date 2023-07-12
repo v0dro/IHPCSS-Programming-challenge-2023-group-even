@@ -1,4 +1,4 @@
-CC=mpicc
+CC=nvc
 CFLAGS=-O2 -Wall -mp=gpu -fopenmp -lm
 BIN_DIR=bin
 
