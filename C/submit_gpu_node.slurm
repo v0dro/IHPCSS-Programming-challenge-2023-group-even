@@ -36,7 +36,7 @@
 #SBATCH -t 00:00:30
 
 # The number of nodes (at most 2)
-#SBATCH -N 1
+#SBATCH -N 2
 
 # The number of MPI processes
 export MPI_PROCESS_COUNT=1;
