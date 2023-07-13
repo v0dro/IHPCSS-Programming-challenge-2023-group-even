@@ -83,23 +83,41 @@ void calculate_pagerank(int* offsets, int* indices, double pagerank[])
 
 #pragma omp target map(to: new_pagerank[0:GRAPH_ORDER])
       {
-        for (int i = 0; i < GRAPH_ORDER; ++i) {
-          new_pagerank[i] = 0.0;
+#pragma omp teams
+        {
+          int teams = omp_get_num_teams();
+          int chunks = GRAPH_ORDER / teams;
+          #pragma omp distribute
+          for (int chunk = 0; chunk < chunks; ++chunk) {
+            #pragma omp parallel for
+            for (int i = chunk * teams; i < chunk * teams + teams; ++i) {
+              new_pagerank[i] = 0.0;
+            }
+          }
+          int leftover = GRAPH_ORDER - chunks * teams;
+          #pragma omp parallel for
+          for (int i = leftover; i < GRAPH_ORDER; ++i) {
+            new_pagerank[i] = 0.0;
+          }
         }
       }
 
 #pragma omp target map(to: new_pagerank[0:GRAPH_ORDER]) \
+  map(to: pagerank[0:GRAPH_ORDER])                      \
   map(to: offsets[0:GRAPH_ORDER+1])                     \
   map(to: indices[0:GRAPH_ORDER*GRAPH_ORDER])
       {
-        for (int j = 0; j < GRAPH_ORDER; ++j) {
-          double outdegree = offsets[j+1] - offsets[j];
-          double pagerank_j = pagerank[j];
-          for (int i = offsets[j]; i < offsets[j+1]; ++i) {
-            int i_node = indices[i];
-            new_pagerank[i_node] += pagerank_j / outdegree;
+        /* #pragma omp teams */
+        /* { */
+          for (int j = 0; j < GRAPH_ORDER; ++j) {
+            double outdegree = offsets[j+1] - offsets[j];
+            double pagerank_j = pagerank[j];
+            for (int i = offsets[j]; i < offsets[j+1]; ++i) {
+              int i_node = indices[i];
+              new_pagerank[i_node] += pagerank_j / outdegree;
+            }
           }
-        }
+        /* } */
       }
 
       double pagerank_total = 0.0;
