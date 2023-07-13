@@ -102,10 +102,12 @@ void calculate_pagerank(int* offsets, int* indices, double pagerank[])
         }
       }
 
-#pragma omp target map(to: new_pagerank[0:GRAPH_ORDER]) \
-  map(to: pagerank[0:GRAPH_ORDER])                      \
-  map(to: offsets[0:GRAPH_ORDER+1])                     \
-  map(to: indices[0:GRAPH_ORDER*GRAPH_ORDER])
+      double pagerank_total = 0.0;
+#pragma omp target map(to: new_pagerank[0:GRAPH_ORDER])         \
+  map(tofrom: pagerank[0:GRAPH_ORDER])                              \
+  map(to: offsets[0:GRAPH_ORDER+1])                             \
+  map(to: indices[0:GRAPH_ORDER*GRAPH_ORDER])                   \
+  map(tofrom: pagerank_total, max_diff, total_diff, min_diff)
       {
         /* #pragma omp teams */
         /* { */
@@ -118,26 +120,13 @@ void calculate_pagerank(int* offsets, int* indices, double pagerank[])
             }
           }
         /* } */
-      }
-
-      double pagerank_total = 0.0;
-
-#pragma omp target map(tofrom: pagerank_total, max_diff, total_diff, min_diff) \
-  map(to: new_pagerank[0:GRAPH_ORDER]) \
-  map(tofrom: pagerank[0:GRAPH_ORDER])
-      {
+      /* } */
 
         double diff = 0;
         for(int i = 0; i < GRAPH_ORDER; i++) {
           new_pagerank[i] = DAMPING_FACTOR * new_pagerank[i] + damping_value;
           diff += fabs(new_pagerank[i] - pagerank[i]);
-        }
-
-        for (int i = 0; i < GRAPH_ORDER; ++i) {
           pagerank_total += new_pagerank[i];
-        }
-
-        for (int i = 0; i < GRAPH_ORDER; ++i) {
           pagerank[i] = new_pagerank[i];
         }
 
