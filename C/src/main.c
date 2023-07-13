@@ -73,10 +73,11 @@ void calculate_pagerank(int* offsets, int* indices, double pagerank[])
     }
 
     for (int j = 0; j < GRAPH_ORDER; ++j) {
+      double outdegree = offsets[j+1] - offsets[j];
+      double pagerank_j = pagerank[j];
       for (int i = offsets[j]; i < offsets[j+1]; ++i) {
         int i_node = indices[i];
-        int outdegree = offsets[j+1] - offsets[j];
-        new_pagerank[i_node] += pagerank[j] / (double)outdegree;
+        new_pagerank[i_node] += pagerank_j / outdegree;
       }
     }
 
