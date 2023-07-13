@@ -43,7 +43,7 @@ export MPI_PROCESS_COUNT=1;
 
 # The number of OpenMP threads. If using MPI, it is the number of OpenMP threads
 # per MPI process
-export OMP_NUM_THREADS=1;
+export OMP_NUM_THREADS=20;
 
 # Place OpenMP threads on cores
 export OMP_PLACES=cores;

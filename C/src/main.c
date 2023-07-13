@@ -49,7 +49,11 @@ void initialize_graph(int* offsets, int* indices)
  */
 void calculate_pagerank(int* offsets, int* indices, double pagerank[])
 {
-  double initial_rank = 1.0 / GRAPH_ORDER;
+  double initial_rank;
+  #pragma omp parallel
+  {
+    initial_rank = 1.0 / GRAPH_ORDER;
+  }
   double new_pagerank[GRAPH_ORDER];
   for(int i = 0; i < GRAPH_ORDER; i++) {
     // Initialise all vertices to 1/n.
@@ -86,12 +90,15 @@ void calculate_pagerank(int* offsets, int* indices, double pagerank[])
     diff = 0.0;
     double pagerank_total = 0.0;
 
-#pragma omp parallel for reduction(+:diff)
+#pragma omp parallel for
     for(int i = 0; i < GRAPH_ORDER; i++) {
-      new_pagerank[i] = DAMPING_FACTOR * new_pagerank[i] + damping_value;
-      diff += fabs(new_pagerank[i] - pagerank[i]);
+      new_pagerank[i] =  DAMPING_FACTOR * new_pagerank[i] + damping_value;
     }
 
+#pragma omp parallel for reduction(+:diff)
+    for(int i = 0; i < GRAPH_ORDER; i++) {
+      diff += fabs(new_pagerank[i] - pagerank[i]);
+    }
 #pragma omp parallel for reduction(+:pagerank_total)
     for (int i = 0; i < GRAPH_ORDER; ++i) {
       pagerank_total += new_pagerank[i];
