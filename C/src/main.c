@@ -74,6 +74,8 @@ void calculate_pagerank(int* offsets, int* indices, double pagerank[])
       new_pagerank[i] = 0.0;
     }
 
+
+#pragma omp parallel for reduction(+:new_pagerank[0:GRAPH_ORDER])
     for (int j = 0; j < GRAPH_ORDER; ++j) {
       double outdegree = offsets[j+1] - offsets[j];
       double pagerank_j = pagerank[j];
