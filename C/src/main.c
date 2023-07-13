@@ -67,9 +67,10 @@ void calculate_pagerank(int* offsets, int* indices, double pagerank[])
   // If we exceeded the MAX_TIME seconds, we stop. If we typically spend X seconds on an iteration, and we are less than X seconds away from MAX_TIME, we stop.
 
   while(elapsed < MAX_TIME && (elapsed + time_per_iteration) < MAX_TIME) {
+
     double iteration_start = omp_get_wtime();
 
-
+#pragma omp parallel for
     for (int i = 0; i < GRAPH_ORDER; ++i) {
       new_pagerank[i] = 0.0;
     }
@@ -86,38 +87,39 @@ void calculate_pagerank(int* offsets, int* indices, double pagerank[])
     }
 
 
-      diff = 0.0;
-      double pagerank_total = 0.0;
+    diff = 0.0;
+    double pagerank_total = 0.0;
 
-      for(int i = 0; i < GRAPH_ORDER; i++) {
-        new_pagerank[i] = DAMPING_FACTOR * new_pagerank[i] + damping_value;
-        diff += fabs(new_pagerank[i] - pagerank[i]);
-      }
+#pragma omp parallel for reduction(+:diff)
+    for(int i = 0; i < GRAPH_ORDER; i++) {
+      new_pagerank[i] = DAMPING_FACTOR * new_pagerank[i] + damping_value;
+      diff += fabs(new_pagerank[i] - pagerank[i]);
+    }
 
-      for (int i = 0; i < GRAPH_ORDER; ++i) {
-        pagerank_total += new_pagerank[i];
-      }
+#pragma omp parallel for
+    for (int i = 0; i < GRAPH_ORDER; ++i) {
+      pagerank_total += new_pagerank[i];
+    }
 
-      for (int i = 0; i < GRAPH_ORDER; ++i) {
-        pagerank[i] = new_pagerank[i];
-      }
+#pragma omp parallel for
+    for (int i = 0; i < GRAPH_ORDER; ++i) {
+      pagerank[i] = new_pagerank[i];
+    }
+
+    max_diff = (max_diff < diff) ? diff : max_diff;
+    total_diff += diff;
+    min_diff = (min_diff > diff) ? diff : min_diff;
 
 
+    if(fabs(pagerank_total - 1.0) >= 1.0) {
+      printf("[ERROR] Iteration %zu: sum of all pageranks is not 1 but %.12f.\n",
+             iteration, pagerank_total);
+    }
 
-      max_diff = (max_diff < diff) ? diff : max_diff;
-      total_diff += diff;
-      min_diff = (min_diff > diff) ? diff : min_diff;
-
-
-      if(fabs(pagerank_total - 1.0) >= 1.0) {
-        printf("[ERROR] Iteration %zu: sum of all pageranks is not 1 but %.12f.\n",
-               iteration, pagerank_total);
-      }
-
-      double iteration_end = omp_get_wtime();
-      elapsed = omp_get_wtime() - start;
-      iteration++;
-      time_per_iteration = elapsed / iteration;
+    double iteration_end = omp_get_wtime();
+    elapsed = omp_get_wtime() - start;
+    iteration++;
+    time_per_iteration = elapsed / iteration;
   }
 
   printf("%zu iterations achieved in %.2f seconds\n", iteration, elapsed);
