@@ -65,46 +65,69 @@ void calculate_pagerank(int* offsets, int* indices, double pagerank[])
 
 
   // If we exceeded the MAX_TIME seconds, we stop. If we typically spend X seconds on an iteration, and we are less than X seconds away from MAX_TIME, we stop.
+
   while(elapsed < MAX_TIME && (elapsed + time_per_iteration) < MAX_TIME) {
-    double iteration_start = omp_get_wtime();
+#pragma omp parallel
+    {
+#pragma omp master
+      {
+        double iteration_start = omp_get_wtime();
 
-    for (int i = 0; i < GRAPH_ORDER; ++i) {
-      new_pagerank[i] = 0.0;
-    }
 
-    for (int j = 0; j < GRAPH_ORDER; ++j) {
-      double outdegree = offsets[j+1] - offsets[j];
-      double pagerank_j = pagerank[j];
-      for (int i = offsets[j]; i < offsets[j+1]; ++i) {
-        int i_node = indices[i];
-        new_pagerank[i_node] += pagerank_j / outdegree;
+        for (int i = 0; i < GRAPH_ORDER; ++i) {
+          new_pagerank[i] = 0.0;
+        }
+      }
+
+#pragma omp for reduction(+:new_pagerank[0:GRAPH_ORDER])
+      for (int j = 0; j < GRAPH_ORDER; ++j) {
+        double outdegree = offsets[j+1] - offsets[j];
+        double pagerank_j = pagerank[j];
+        for (int i = offsets[j]; i < offsets[j+1]; ++i) {
+          int i_node = indices[i];
+          new_pagerank[i_node] += pagerank_j / outdegree;
+        }
+      }
+
+      diff = 0.0;
+      double pagerank_total = 0.0;
+
+#pragma omp for reduction(+:diff)
+      for(int i = 0; i < GRAPH_ORDER; i++) {
+        new_pagerank[i] = DAMPING_FACTOR * new_pagerank[i] + damping_value;
+        diff += fabs(new_pagerank[i] - pagerank[i]);
+      }
+
+#pragma omp for reduction(+:pagerank_total)
+      for (int i = 0; i < GRAPH_ORDER; ++i) {
+        pagerank_total += new_pagerank[i];
+      }
+
+#pragma omp for
+      for (int i = 0; i < GRAPH_ORDER; ++i) {
+        pagerank[i] = new_pagerank[i];
+      }
+
+
+#pragma omp master
+      {
+
+      max_diff = (max_diff < diff) ? diff : max_diff;
+      total_diff += diff;
+      min_diff = (min_diff > diff) ? diff : min_diff;
+
+
+      if(fabs(pagerank_total - 1.0) >= 1.0) {
+        printf("[ERROR] Iteration %zu: sum of all pageranks is not 1 but %.12f.\n",
+               iteration, pagerank_total);
+      }
+
+      double iteration_end = omp_get_wtime();
+      elapsed = omp_get_wtime() - start;
+      iteration++;
+      time_per_iteration = elapsed / iteration;
       }
     }
-
-
-    diff = 0.0;
-    double pagerank_total = 0.0;
-
-    for(int i = 0; i < GRAPH_ORDER; i++) {
-      new_pagerank[i] = DAMPING_FACTOR * new_pagerank[i] + damping_value;
-      diff += fabs(new_pagerank[i] - pagerank[i]);
-      pagerank[i] = new_pagerank[i];
-      pagerank_total += pagerank[i];
-    }
-    max_diff = (max_diff < diff) ? diff : max_diff;
-    total_diff += diff;
-    min_diff = (min_diff > diff) ? diff : min_diff;
-
-
-    if(fabs(pagerank_total - 1.0) >= 1.0) {
-      printf("[ERROR] Iteration %zu: sum of all pageranks is not 1 but %.12f.\n",
-             iteration, pagerank_total);
-    }
-
-    double iteration_end = omp_get_wtime();
-    elapsed = omp_get_wtime() - start;
-    iteration++;
-    time_per_iteration = elapsed / iteration;
   }
 
   printf("%zu iterations achieved in %.2f seconds\n", iteration, elapsed);
