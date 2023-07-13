@@ -1,5 +1,5 @@
 CC=nvc
-CFLAGS=-O2 -Wall -mp=gpu -fopenmp -lm
+CFLAGS=-O2 -Wall -mp=gpu -fopenmp -lm -Minfo=all
 BIN_DIR=bin
 
 default: all

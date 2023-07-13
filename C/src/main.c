@@ -5,6 +5,7 @@
  * @author Ludovic Capelli (l.capelli@epcc.ed.ac.uk)
  **/
 
+#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -70,11 +71,7 @@ void calculate_pagerank(int* offsets, int* indices, double pagerank[])
 
     double iteration_start = omp_get_wtime();
 
-#pragma omp parallel for
-    for (int i = 0; i < GRAPH_ORDER; ++i) {
-      new_pagerank[i] = 0.0;
-    }
-
+    memset(new_pagerank, 0, sizeof(double) * GRAPH_ORDER);
 
 #pragma omp parallel for reduction(+:new_pagerank[0:GRAPH_ORDER])
     for (int j = 0; j < GRAPH_ORDER; ++j) {
@@ -86,7 +83,6 @@ void calculate_pagerank(int* offsets, int* indices, double pagerank[])
       }
     }
 
-
     diff = 0.0;
     double pagerank_total = 0.0;
 
@@ -96,15 +92,13 @@ void calculate_pagerank(int* offsets, int* indices, double pagerank[])
       diff += fabs(new_pagerank[i] - pagerank[i]);
     }
 
-#pragma omp parallel for
+#pragma omp parallel for reduction(+:pagerank_total)
     for (int i = 0; i < GRAPH_ORDER; ++i) {
       pagerank_total += new_pagerank[i];
     }
 
-#pragma omp parallel for
-    for (int i = 0; i < GRAPH_ORDER; ++i) {
-      pagerank[i] = new_pagerank[i];
-    }
+
+    memcpy(pagerank, new_pagerank, sizeof(double) * GRAPH_ORDER);
 
     max_diff = (max_diff < diff) ? diff : max_diff;
     total_diff += diff;

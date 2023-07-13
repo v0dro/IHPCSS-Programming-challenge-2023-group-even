@@ -24,13 +24,13 @@
 # SBATCH --res ihpcssday2GPU2
 
 # The partition to use, GPU nodes here
-#SBATCH -p GPU-shared
+#SBATCH -p GPU
 
 # The type and number of GPUs to use per node (8 per node, so 8 = 1 full node).
 # There are 8 GPUs per node, so each GPU is also allocated 1/8th of the all
 # resources on the node (1/8th of the RAM, 1/8th of the cores etc...)
 # To change the number of GPUs, change the last number --gres=<x>:<y>:<this_one>
-#SBATCH --gres=gpu:v100-16:1
+#SBATCH --gres=gpu:v100-16:8
 
 # Jobs are capped at 30 seconds (Your code should run for ~10 seconds anyway)
 #SBATCH -t 00:00:30
@@ -52,10 +52,10 @@ export OMP_PLACES=cores;
 export OMP_PROC_BIND=true;
 
 # Load the modules needed
-module load nvhpc/22.9 openmpi/4.0.5-nvhpc22.9
+module load cuda nvhpc
 
 # Compile everything
 make
 
 # Execute the program
-mpirun --bind-to none -n $MPI_PROCESS_COUNT --report-bindings ./bin/main
+./bin/main
