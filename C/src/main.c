@@ -89,6 +89,7 @@ void calculate_pagerank(int* offsets, int* indices, double pagerank[])
         }
       }
 
+
       diff = 0.0;
       double pagerank_total = 0.0;
 
@@ -112,20 +113,20 @@ void calculate_pagerank(int* offsets, int* indices, double pagerank[])
 #pragma omp master
       {
 
-      max_diff = (max_diff < diff) ? diff : max_diff;
-      total_diff += diff;
-      min_diff = (min_diff > diff) ? diff : min_diff;
+        max_diff = (max_diff < diff) ? diff : max_diff;
+        total_diff += diff;
+        min_diff = (min_diff > diff) ? diff : min_diff;
 
 
-      if(fabs(pagerank_total - 1.0) >= 1.0) {
-        printf("[ERROR] Iteration %zu: sum of all pageranks is not 1 but %.12f.\n",
-               iteration, pagerank_total);
-      }
+        if(fabs(pagerank_total - 1.0) >= 1.0) {
+          printf("[ERROR] Iteration %zu: sum of all pageranks is not 1 but %.12f.\n",
+                 iteration, pagerank_total);
+        }
 
-      double iteration_end = omp_get_wtime();
-      elapsed = omp_get_wtime() - start;
-      iteration++;
-      time_per_iteration = elapsed / iteration;
+        double iteration_end = omp_get_wtime();
+        elapsed = omp_get_wtime() - start;
+        iteration++;
+        time_per_iteration = elapsed / iteration;
       }
     }
   }
