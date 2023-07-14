@@ -98,13 +98,33 @@ void calculate_pagerank(int* offsets, int* indices, double *pagerank)
     int tnum = omp_get_max_threads();
     int chunk_size = GRAPH_ORDER / tnum;
 
+#pragma omp parallel for
     for (int t_id = 0; t_id < tnum; ++t_id) {
-      for (int i = t_id * chunk_size; i < t_id * chunk_size + chunk_size; ++i) {
+      int chunk_begin = t_id * chunk_size;
+      int chunk_end = t_id * chunk_size + chunk_size;
+
+      for (int i = chunk_begin; i < chunk_end; i += SIMD_LEN) {
+        __m512d R0, R1, R2, R3, R4;
+
+        R0 = _mm512_load_pd(new_pagerank + i);
+        R1 = _mm512_set1_pd(DAMPING_FACTOR);
+        R2 = _mm512_set1_pd(damping_value);
+
+        R3 = _mm512_mul_pd(R1, R0); // DAMPING_FACTOR * new_pagerank[ii + i]
+        R4 = _mm512_add_pd(R3, R2);
+
+        _mm512_store_pd(new_pagerank + i, R4);
+      }
+
+      int last_chunk_boundary = (chunk_end / SIMD_LEN) * SIMD_LEN;
+
+      for (int i = last_chunk_boundary; i < chunk_end; ++i) {
         new_pagerank[i] = DAMPING_FACTOR * new_pagerank[i] + damping_value;
       }
     }
 
     int leftover = tnum * chunk_size;
+#pragma omp parallel for
     for (int i = leftover; i < GRAPH_ORDER; ++i) {
       new_pagerank[i] = DAMPING_FACTOR * new_pagerank[i] + damping_value;
     }
