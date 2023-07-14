@@ -88,8 +88,9 @@ void calculate_pagerank(int* offsets, int* indices, double *pagerank)
       double outdegree =  1.0 / (col_end - col_start);
       double pagerank_j = pagerank[j];
 
-      for (int i = 0; i < col_end - col_start; ++i) {
-        new_pagerank[i] += pagerank_j * outdegree;
+
+      for (int i = 0; i < col_end - col_start + ((j < 500) ? 1 : 0); ++i) {
+        new_pagerank[i] += i != j ? pagerank_j * outdegree : 0;
       }
     }
 
@@ -147,6 +148,8 @@ inline void generate_sneaky_graph(int *offsets, int *indices)
   initialize_graph(offsets, indices);
   int csr_index = 0;
   offsets[0] = 0;
+  int r_total = 0, c_total = 0;
+
   for(int i = 0; i < GRAPH_ORDER; i++) {
     int non_zeros = 0;
     for(int j = 0; j < GRAPH_ORDER - i; ++j) {
@@ -157,6 +160,7 @@ inline void generate_sneaky_graph(int *offsets, int *indices)
         csr_index++;
       }
     }
+    c_total = 0; r_total = 0;
     offsets[i+1] = offsets[i] + non_zeros;
   }
   /* printf("%.2f seconds to generate the graph.\n", omp_get_wtime() - start); */
