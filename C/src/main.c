@@ -81,70 +81,22 @@ void calculate_pagerank(int* offsets, int* indices, double *pagerank)
 
     memset(new_pagerank, 0, sizeof(double) * GRAPH_ORDER);
 
-/* #pragma omp parallel for reduction(+:new_pagerank[0:GRAPH_ORDER]) */
+#pragma omp parallel for reduction(+:new_pagerank[0:GRAPH_ORDER])
     for (int j = 0; j < GRAPH_ORDER; ++j) {
       int col_end = offsets[j+1];
       int col_start = offsets[j];
       double outdegree =  1.0 / (col_end - col_start);
       double pagerank_j = pagerank[j];
 
-      /* for (int i = col_start; i < col_end; ++i) { */
-      /*   new_pagerank[i] += (i-col_start) < j ? pagerank_j * outdegree : 0; */
-      /*   /\* if ((i - col_start) != indices[i]) { *\/ */
-      /*   /\*   printf(">> i: %d i_node: %d i: %d j: %d\n", i-col_start, indices[i], i, j); *\/ */
-      /*   /\* } *\/ */
-      /*   /\* else { *\/ */
-      /*   /\*   printf("<< i: %d i_node: %d i: %d j: %d\n", i-col_start, indices[i], i, j); *\/ */
-      /*   /\* } *\/ */
-      /*     /\* int i_node = indices[i]; *\/ */
-      /*     /\* new_pagerank[i_node] += pagerank_j * outdegree; *\/ */
-      /* } */
-
-      for (int i = 0; i < GRAPH_ORDER - j; ++i) {
+      for (int i = 0; i < col_end - col_start; ++i) {
         new_pagerank[i] += pagerank_j * outdegree;
       }
-
-      /* for (int i = j; i < col_end - col_start; ++i) { */
-      /*   new_pagerank[i+1] += pagerank_j * outdegree; */
-      /* } */
-      /* for (int i = col_start; i < col_end; ++i) { */
-      /*   int i_node = indices[i]; */
-      /*   new_pagerank[i_node] += pagerank_j * outdegree; */
-      /* } */
     }
 
     diff = 0.0;
     double pagerank_total = 0.0;
     int tnum = omp_get_max_threads();
     int chunk_size = GRAPH_ORDER / tnum;
-
-/* #pragma omp parallel for */
-/*     for (int t_id = 0; t_id < tnum; ++t_id) { */
-/*       int chunk_begin = t_id * chunk_size; */
-/*       int chunk_end = t_id * chunk_size + chunk_size; */
-
-/*       for (int i = chunk_begin; i < chunk_end; i += SIMD_LEN) { */
-/*         for (int ii = 0; ii < SIMD_LEN; ++ii) { */
-/*           new_pagerank[ii+i] = DAMPING_FACTOR * new_pagerank[ii+i] + damping_value; */
-/*         } */
-/*         /\* __m512d R0, R1, R2, R3, R4; *\/ */
-
-/*         /\* R0 = _mm512_load_pd(new_pagerank + i); *\/ */
-/*         /\* R1 = _mm512_set1_pd(DAMPING_FACTOR); *\/ */
-/*         /\* R2 = _mm512_set1_pd(damping_value); *\/ */
-
-/*         /\* R3 = _mm512_mul_pd(R1, R0); // DAMPING_FACTOR * new_pagerank[ii + i] *\/ */
-/*         /\* R4 = _mm512_add_pd(R3, R2); *\/ */
-
-/*         /\* _mm512_store_pd(new_pagerank + i, R4); *\/ */
-/*       } */
-
-/*       int last_chunk_boundary = (chunk_end / SIMD_LEN) * SIMD_LEN; */
-
-/*       for (int i = last_chunk_boundary; i < chunk_end; ++i) { */
-/*         new_pagerank[i] = DAMPING_FACTOR * new_pagerank[i] + damping_value; */
-/*       } */
-/*     } */
 
 #pragma omp parallel for
     for (int i = 0; i < GRAPH_ORDER; ++i) {
