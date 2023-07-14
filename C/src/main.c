@@ -26,9 +26,9 @@
  * Redundant edges are still represented with value 1.0.
  */
 double adjacency_matrix[GRAPH_ORDER][GRAPH_ORDER];
-double max_diff = 0.0;
-double min_diff = 1.0;
-double total_diff = 0.0;
+float max_diff = 0.0;
+float min_diff = 1.0;
+float total_diff = 0.0;
 
 void initialize_graph(int* offsets, int* indices)
 {
@@ -47,22 +47,22 @@ void initialize_graph(int* offsets, int* indices)
  * @brief Calculates the pagerank of all vertices in the graph.
  * @param pagerank The array in which store the final pageranks.
  */
-void calculate_pagerank(int* offsets, int* indices, double pagerank[])
+inline void calculate_pagerank(int* offsets, int* indices, float *pagerank)
 {
-  double initial_rank;
+  float initial_rank;
   #pragma omp parallel
   {
     initial_rank = 1.0 / GRAPH_ORDER;
   }
-  double new_pagerank[GRAPH_ORDER];
+  float new_pagerank[GRAPH_ORDER];
   for(int i = 0; i < GRAPH_ORDER; i++) {
     // Initialise all vertices to 1/n.
     pagerank[i] = initial_rank;
     new_pagerank[i] = 0.0;
   }
 
-  double damping_value = (1.0 - DAMPING_FACTOR) / GRAPH_ORDER;
-  double diff = 1.0;
+  float damping_value = (1.0 - DAMPING_FACTOR) / GRAPH_ORDER;
+  float diff = 1.0;
   size_t iteration = 0;
   double start = omp_get_wtime();
   double elapsed = omp_get_wtime() - start;
@@ -75,14 +75,14 @@ void calculate_pagerank(int* offsets, int* indices, double pagerank[])
 
     double iteration_start = omp_get_wtime();
 
-    memset(new_pagerank, 0, sizeof(double) * GRAPH_ORDER);
+    memset(new_pagerank, 0, sizeof(float) * GRAPH_ORDER);
 
 #pragma omp parallel for reduction(+:new_pagerank[0:GRAPH_ORDER])
     for (int j = 0; j < GRAPH_ORDER; ++j) {
       int col_end = offsets[j+1];
       int col_start = offsets[j];
-      double outdegree =  1.0 / (col_end - col_start);
-      double pagerank_j = pagerank[j];
+      float outdegree =  1.0 / (col_end - col_start);
+      float pagerank_j = pagerank[j];
       for (int i = col_start; i < col_end; ++i) {
         int i_node = indices[i];
         new_pagerank[i_node] += pagerank_j * outdegree;
@@ -90,11 +90,11 @@ void calculate_pagerank(int* offsets, int* indices, double pagerank[])
     }
 
     diff = 0.0;
-    double pagerank_total = 0.0;
+    float pagerank_total = 0.0;
 
 #pragma omp parallel for
     for(int i = 0; i < GRAPH_ORDER; i++) {
-      new_pagerank[i] =  DAMPING_FACTOR * new_pagerank[i] + damping_value;
+      new_pagerank[i] = DAMPING_FACTOR * new_pagerank[i] + damping_value;
     }
 
 #pragma omp parallel for reduction(+:pagerank_total) reduction(+:diff)
@@ -103,8 +103,7 @@ void calculate_pagerank(int* offsets, int* indices, double pagerank[])
       pagerank_total += new_pagerank[i];
     }
 
-
-    memcpy(pagerank, new_pagerank, sizeof(double) * GRAPH_ORDER);
+    memcpy(pagerank, new_pagerank, sizeof(float) * GRAPH_ORDER);
 
     max_diff = (max_diff < diff) ? diff : max_diff;
     total_diff += diff;
@@ -138,7 +137,7 @@ inline void generate_sneaky_graph(int *offsets, int *indices)
   offsets[0] = 0;
   for(int i = 0; i < GRAPH_ORDER; i++) {
     int non_zeros = 0;
-    for(int j = 0; j < GRAPH_ORDER - i; j++) {
+    for(int j = 0; j < GRAPH_ORDER - i; ++j) {
       int destination = j;
       if(i != j) {
         indices[csr_index] = destination;
@@ -174,7 +173,7 @@ int main(int argc, char* argv[])
   generate_sneaky_graph(offsets, indices);
 
   /// The array in which each vertex pagerank is stored.
-  double pagerank[GRAPH_ORDER];
+  float pagerank[GRAPH_ORDER];
   calculate_pagerank(offsets, indices, pagerank);
 
   // Calculates the sum of all pageranks. It should be 1.0, so it can be used as a quick verification.
